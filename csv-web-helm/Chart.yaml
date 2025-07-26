@@ -1,0 +1,6 @@
+apiVersion: v2
+name: csv-web
+description: A Helm chart for Node.js CSV processing app
+type: application
+version: 0.1.0
+appVersion: "1.0"
