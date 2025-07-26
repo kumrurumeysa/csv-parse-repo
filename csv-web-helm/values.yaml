@@ -29,7 +29,7 @@ serviceAccount:
     eks.amazonaws.com/role-arn: arn:aws:iam::235911282591:role/csv-web-s3-role
 
 persistence:
-  enabled: true
+  enabled: false
   accessMode: ReadWriteOnce #ReadWriteMany
   size: 1Gi
   storageClassName: gp2 #efs-sc --> for scalable shared storage
