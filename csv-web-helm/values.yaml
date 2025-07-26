@@ -1,0 +1,22 @@
+replicaCount: 1
+
+image:
+  repository: 235911282591.dkr.ecr.eu-central-1.amazonaws.com/case
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  - name: AWS_REGION
+    value: eu-central-1
+  - name: S3_BUCKET
+    value: case-bucket-ounass
+
+serviceAccount:
+  create: true
+  name: csv-web-sa
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::235911282591:role/csv-web-s3-role
