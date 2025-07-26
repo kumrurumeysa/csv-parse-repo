@@ -11,8 +11,12 @@ const s3 = new AWS.S3({ region: process.env.AWS_REGION || 'eu-central-1' });
 
 const PORT = process.env.PORT || 3000;
 const BUCKET = process.env.S3_BUCKET || 'case-bucket-ounass';
+const SHARED_DIR = process.env.SHARED_DIR || '/shared';
 
-app.get('/', (req, res) => {
+// Serve static files
+app.use('/static', express.static(SHARED_DIR));
+
+app.get('/upload', (req, res) => {
   res.send(`
     <h2>Upload CSV</h2>
     <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -22,7 +26,11 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.post('/upload', upload.single('file'), async (req, res) => {
+app.get('/', (req, res) => {
+  res.sendFile(path.join(SHARED_DIR, 'index.html'));
+});
+
+app.post('/', upload.single('file'), async (req, res) => {
   const filePath = req.file.path;
   const results = [];
 
@@ -51,5 +59,18 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       }
     });
 });
+
+const indexHtml = path.join(SHARED_DIR, 'index.html');
+if (!fs.existsSync(indexHtml)) {
+  fs.writeFileSync(indexHtml, `
+    <html>
+      <head><title>CSV Upload App</title></head>
+      <body>
+        <h2>Welcome!</h2>
+        <p><a href="/upload">Go to Upload Page</a></p>
+      </body>
+    </html>
+  `, { mode: 0o644 });
+}
 
 app.listen(PORT, () => console.log(`App running on http://localhost:${PORT}`));
