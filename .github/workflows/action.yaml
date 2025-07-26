@@ -1,0 +1,76 @@
+name: Build and Deploy to EKS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REPOSITORY: 235911282591.dkr.ecr.eu-central-1.amazonaws.com/case
+  IMAGE_TAG: ${{ github.sha }}
+  CLUSTER_NAME: csv-case-cluster
+  HELM_RELEASE: csv-web
+  HELM_NAMESPACE: case
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::235911282591:role/github-actions-oidc-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t $ECR_REPOSITORY:${IMAGE_TAG} ./csv-web-app
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $ECR_REPOSITORY:${IMAGE_TAG}
+
+      - name: Setup kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+      
+      - name: Setup Helm
+        run: |
+          curl https://get.helm.sh/helm-v3.12.0-linux-amd64.tar.gz | tar xz
+          sudo mv linux-amd64/helm /usr/local/bin/
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace $HELM_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install $HELM_RELEASE ./csv-web-helm \
+            --namespace $HELM_NAMESPACE \
+            --set image.web.repository=$ECR_REPOSITORY \
+            --set image.web.tag=${IMAGE_TAG} \
+            --wait
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n $HELM_NAMESPACE
+          kubectl get svc -n $HELM_NAMESPACE
