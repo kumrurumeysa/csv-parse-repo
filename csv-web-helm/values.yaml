@@ -1,9 +1,14 @@
 replicaCount: 1
 
 image:
-  repository: 235911282591.dkr.ecr.eu-central-1.amazonaws.com/case
-  tag: latest
-  pullPolicy: IfNotPresent
+  web:
+    repository: 235911282591.dkr.ecr.eu-central-1.amazonaws.com/case
+    tag: 0.2
+    pullPolicy: IfNotPresent
+  nginx:
+    repository: nginx
+    tag: alpine
+    pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
@@ -14,9 +19,27 @@ env:
     value: eu-central-1
   - name: S3_BUCKET
     value: case-bucket-ounass
+  - name: SHARED_DIR
+    value: /shared
 
 serviceAccount:
   create: true
   name: csv-web-sa
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::235911282591:role/csv-web-s3-role
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteOnce #ReadWriteMany
+  size: 1Gi
+  storageClassName: gp2 #efs-sc --> for scalable shared storage
+  mountPath: /shared
+
+# I did not create an efs or gp2 ebs and I added below part. If we want to user efs we can add also above part and delete below one.
+sharedVolume:
+  enabled: true
+  useEmptyDir: true
+
+ingress:
+  enabled: true
+  host: csv.local
