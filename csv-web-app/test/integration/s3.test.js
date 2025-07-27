@@ -1,6 +1,4 @@
 const AWS = require('aws-sdk');
-const fs = require('fs');
-const path = require('path');
 
 // Mock AWS SDK for integration tests
 jest.mock('aws-sdk');
@@ -18,7 +16,7 @@ describe('S3 Integration Tests', () => {
       }),
       getObject: jest.fn().mockReturnValue({
         promise: jest.fn().mockResolvedValue({
-          Body: fs.createReadStream(path.join(__dirname, 'test.csv'))
+          Body: 'test,csv,content'
         })
       }),
       listObjects: jest.fn().mockReturnValue({
@@ -37,23 +35,17 @@ describe('S3 Integration Tests', () => {
   describe('S3 Upload Functionality', () => {
     it('should upload file to S3 successfully', async () => {
       const s3 = new AWS.S3({ region: 'eu-central-1' });
-      const testFilePath = path.join(__dirname, 'test.csv');
-      const testContent = 'name,age\nJohn,30\nJane,25';
-      fs.writeFileSync(testFilePath, testContent);
 
       const uploadParams = {
         Bucket: 'test-bucket',
         Key: 'uploads/test.csv',
-        Body: fs.createReadStream(testFilePath)
+        Body: 'test content'
       };
 
       const result = await s3.upload(uploadParams).promise();
 
       expect(result.Location).toBe('https://s3.amazonaws.com/test-bucket/test.csv');
       expect(s3Mock.upload).toHaveBeenCalledWith(uploadParams);
-
-      // Cleanup
-      fs.unlinkSync(testFilePath);
     });
 
     it('should handle S3 upload errors', async () => {

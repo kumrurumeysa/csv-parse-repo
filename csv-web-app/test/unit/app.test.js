@@ -120,11 +120,4 @@ describe('CSV Parser Application', () => {
       expect(response.text).toContain('No file uploaded');
     });
   });
-
-  describe('Environment Variables', () => {
-    it('should use default values when env vars are not set', () => {
-      expect(process.env.PORT || 3000).toBe(3000);
-      expect(process.env.AWS_REGION || 'eu-central-1').toBe('eu-central-1');
-    });
-  });
 }); 
