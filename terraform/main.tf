@@ -22,9 +22,79 @@ module "vpc" {
   }
 }
 
+
+resource "aws_s3_bucket" "csv_storage" {
+  bucket = "case-bucket-ounass"
+
+  tags = {
+    Name        = "CSV Parser Storage"
+    Environment = "dev"
+    Terraform   = "true"
+  }
+}
+
+
+resource "random_string" "bucket_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
+
+resource "aws_s3_bucket_versioning" "csv_storage_versioning" {
+  bucket = aws_s3_bucket.csv_storage.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+
+resource "aws_s3_bucket_lifecycle_configuration" "csv_storage_lifecycle" {
+  bucket = aws_s3_bucket.csv_storage.id
+
+  rule {
+    id     = "7-days-to-glacier"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 7
+      storage_class = "GLACIER"
+    }
+
+    expiration {
+      days = 365
+    }
+  }
+}
+
+# S3 Bucket public access block
+resource "aws_s3_bucket_public_access_block" "csv_storage_public_access_block" {
+  bucket = aws_s3_bucket.csv_storage.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# S3 Bucket server-side encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "csv_storage_encryption" {
+  bucket = aws_s3_bucket.csv_storage.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "19.21.0"
+  version = "~> 18.0"
 
   cluster_name    = "csv-case-cluster"
   cluster_version = "1.29"
